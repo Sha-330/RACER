@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Car Racing Game</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+</head>
+<body>
+<script>
+let carX, carY, carWidth, carHeight;
+let obstacles = [];
+let coins = [];
+let score = 0;
+let gameOver = false;
+let roadY = 0;
+let speed = 5;
+
+function setup() {
+  createCanvas(400, 600);
+  carX = width / 2;
+  carY = height - 60;
+  carWidth = 40;
+  carHeight = 60;
+  // Spawn initial obstacles and coins
+  for (let i = 0; i < 3; i++) {
+    obstacles.push({ x: random(50, width - 50), y: -i * 200 - 100, w: 40, h: 40 });
+    coins.push({ x: random(50, width - 50), y: -i * 300 - 200, w: 20, h: 20 });
+  }
+}
+
+function draw() {
+  background(100); // Gray background for road
+  // Draw road lines
+  fill(255);
+  for (let y = roadY; y < height; y += 40) {
+    rect(width / 2 - 5, y, 10, 20);
+  }
+  roadY = (roadY + speed) % 40;
+
+  if (!gameOver) {
+    // Draw car
+    fill(0, 0, 255);
+    rect(carX - carWidth / 2, carY - carHeight / 2, carWidth, carHeight);
+
+    // Move car with arrow keys
+    if (keyIsDown(LEFT_ARROW) && carX > carWidth / 2) {
+      carX -= 5;
+    }
+    if (keyIsDown(RIGHT_ARROW) && carX < width - carWidth / 2) {
+      carX += 5;
+    }
+
+    // Update and draw obstacles
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      let obs = obstacles[i];
+      obs.y += speed;
+      fill(255, 0, 0);
+      rect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+      // Check collision
+      if (collideRectRect(carX - carWidth / 2, carY - carHeight / 2, carWidth, carHeight,
+                          obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h)) {
+        gameOver = true;
+      }
+      // Remove obstacles that go off screen
+      if (obs.y > height + obs.h) {
+        obstacles.splice(i, 1);
+        obstacles.push({ x: random(50, width - 50), y: -100, w: 40, h: 40 });
+      }
+    }
+
+    // Update and draw coins
+    for (let i = coins.length - 1; i >= 0; i--) {
+      let coin = coins[i];
+      coin.y += speed;
+      fill(255, 255, 0);
+      ellipse(coin.x, coin.y, coin.w, coin.h);
+      // Check coin collection
+      if (collideRectCircle(carX - carWidth / 2, carY - carHeight / 2, carWidth, carHeight,
+                            coin.x, coin.y, coin.w)) {
+        score += 10;
+        coins.splice(i, 1);
+        coins.push({ x: random(50, width - 50), y: -100, w: 20, h: 20 });
+      }
+      // Remove coins that go off screen
+      if (coin.y > height + coin.h) {
+        coins.splice(i, 1);
+        coins.push({ x: random(50, width - 50), y: -100, w: 20, h: 20 });
+      }
+    }
+
+    // Increase difficulty
+    speed = 5 + score / 100;
+  }
+
+  // Draw score
+  fill(255);
+  textSize(20);
+  textAlign(LEFT);
+  text("Score: " + score, 10, 30);
+
+  // Game over screen
+  if (gameOver) {
+    fill(255, 0, 0);
+    textSize(40);
+    textAlign(CENTER);
+    text("Game Over", width / 2, height / 2);
+    text("Score: " + score, width / 2, height / 2 + 50);
+    textSize(20);
+    text("Press R to Restart", width / 2, height / 2 + 100);
+  }
+}
+
+// Simple collision detection functions
+function collideRectRect(x1, y1, w1, h1, x2, y2, w2, h2) {
+  return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;
+}
+
+function collideRectCircle(rx, ry, rw, rh, cx, cy, diameter) {
+  let testX = cx;
+  let testY = cy;
+  if (cx < rx) testX = rx;
+  else if (cx > rx + rw) testX = rx + rw;
+  if (cy < ry) testY = ry;
+  else if (cy > ry + rh) testY = ry + rh;
+  let distX = cx - testX;
+  let distY = cy - testY;
+  let distance = sqrt(distX * distX + distY * distY);
+  return distance <= diameter / 2;
+}
+
+// Restart game
+function keyPressed() {
+  if (key === 'r' || key === 'R' || key === ' ') {
+    if (gameOver) {
+      score = 0;
+      speed = 5;
+      carX = width / 2;
+      obstacles = [];
+      coins = [];
+      for (let i = 0; i < 3; i++) {
+        obstacles.push({ x: random(50, width - 50), y: -i * 200 - 100, w: 40, h: 40 });
+        coins.push({ x: random(50, width - 50), y: -i * 300 - 200, w: 20, h: 20 });
+      }
+      gameOver = false;
+    }
+  }
+}
+</script>
+</body>
+</html>
