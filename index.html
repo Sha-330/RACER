@@ -3,8 +3,24 @@
 <head>
   <title>Car Racing Game</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #222;
+      font-family: Arial, sans-serif;
+    }
+    #game-container {
+      position: relative;
+    }
+  </style>
 </head>
 <body>
+<div id="game-container"></div>
 <script>
 let carX, carY, carWidth, carHeight;
 let obstacles = [];
@@ -14,12 +30,31 @@ let gameOver = false;
 let roadY = 0;
 let speed = 5;
 
+// Touch controls
+let isTouchDevice = false;
+let leftButton, rightButton, restartButton;
+let leftPressed = false;
+let rightPressed = false;
+
 function setup() {
-  createCanvas(400, 600);
+  let canvas = createCanvas(400, 600);
+  canvas.parent('game-container');
+  
+  // Detect touch capability
+  isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+  
   carX = width / 2;
   carY = height - 60;
   carWidth = 40;
   carHeight = 60;
+  
+  // Initialize touch buttons
+  if (isTouchDevice) {
+    leftButton = { x: 50, y: height - 80, w: 80, h: 60 };
+    rightButton = { x: width - 130, y: height - 80, w: 80, h: 60 };
+    restartButton = { x: width/2 - 60, y: height/2 + 120, w: 120, h: 40 };
+  }
+  
   // Spawn initial obstacles and coins
   for (let i = 0; i < 3; i++) {
     obstacles.push({ x: random(50, width - 50), y: -i * 200 - 100, w: 40, h: 40 });
@@ -29,6 +64,7 @@ function setup() {
 
 function draw() {
   background(100); // Gray background for road
+  
   // Draw road lines
   fill(255);
   for (let y = roadY; y < height; y += 40) {
@@ -41,11 +77,11 @@ function draw() {
     fill(0, 0, 255);
     rect(carX - carWidth / 2, carY - carHeight / 2, carWidth, carHeight);
 
-    // Move car with arrow keys
-    if (keyIsDown(LEFT_ARROW) && carX > carWidth / 2) {
+    // Move car with arrow keys or touch buttons
+    if ((keyIsDown(LEFT_ARROW) || leftPressed) && carX > carWidth / 2) {
       carX -= 5;
     }
-    if (keyIsDown(RIGHT_ARROW) && carX < width - carWidth / 2) {
+    if ((keyIsDown(RIGHT_ARROW) || rightPressed) && carX < width - carWidth / 2) {
       carX += 5;
     }
 
@@ -55,11 +91,13 @@ function draw() {
       obs.y += speed;
       fill(255, 0, 0);
       rect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+      
       // Check collision
       if (collideRectRect(carX - carWidth / 2, carY - carHeight / 2, carWidth, carHeight,
                           obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h)) {
         gameOver = true;
       }
+      
       // Remove obstacles that go off screen
       if (obs.y > height + obs.h) {
         obstacles.splice(i, 1);
@@ -73,6 +111,7 @@ function draw() {
       coin.y += speed;
       fill(255, 255, 0);
       ellipse(coin.x, coin.y, coin.w, coin.h);
+      
       // Check coin collection
       if (collideRectCircle(carX - carWidth / 2, carY - carHeight / 2, carWidth, carHeight,
                             coin.x, coin.y, coin.w)) {
@@ -80,6 +119,7 @@ function draw() {
         coins.splice(i, 1);
         coins.push({ x: random(50, width - 50), y: -100, w: 20, h: 20 });
       }
+      
       // Remove coins that go off screen
       if (coin.y > height + coin.h) {
         coins.splice(i, 1);
@@ -91,6 +131,11 @@ function draw() {
     speed = 5 + score / 100;
   }
 
+  // Draw touch controls if on touch device
+  if (isTouchDevice) {
+    drawTouchControls();
+  }
+
   // Draw score
   fill(255);
   textSize(20);
@@ -99,14 +144,95 @@ function draw() {
 
   // Game over screen
   if (gameOver) {
+    fill(0, 0, 0, 150);
+    rect(0, 0, width, height);
+    
     fill(255, 0, 0);
     textSize(40);
     textAlign(CENTER);
     text("Game Over", width / 2, height / 2);
     text("Score: " + score, width / 2, height / 2 + 50);
     textSize(20);
-    text("Press R to Restart", width / 2, height / 2 + 100);
+    
+    if (isTouchDevice) {
+      text("Tap Restart Button", width / 2, height / 2 + 100);
+      // Draw restart button
+      fill(0, 150, 0);
+      rect(restartButton.x, restartButton.y, restartButton.w, restartButton.h);
+      fill(255);
+      textAlign(CENTER);
+      text("RESTART", restartButton.x + restartButton.w/2, restartButton.y + restartButton.h/2 + 5);
+    } else {
+      text("Press R or Space to Restart", width / 2, height / 2 + 100);
+    }
   }
+}
+
+function drawTouchControls() {
+  if (gameOver) return;
+  
+  // Draw left button
+  fill(leftPressed ? 100 : 50);
+  stroke(255);
+  strokeWeight(2);
+  rect(leftButton.x, leftButton.y, leftButton.w, leftButton.h, 10);
+  
+  // Draw left arrow
+  fill(255);
+  noStroke();
+  textAlign(CENTER);
+  textSize(24);
+  text("◀", leftButton.x + leftButton.w/2, leftButton.y + leftButton.h/2 + 8);
+  
+  // Draw right button
+  fill(rightPressed ? 100 : 50);
+  stroke(255);
+  strokeWeight(2);
+  rect(rightButton.x, rightButton.y, rightButton.w, rightButton.h, 10);
+  
+  // Draw right arrow
+  fill(255);
+  noStroke();
+  textAlign(CENTER);
+  textSize(24);
+  text("▶", rightButton.x + rightButton.w/2, rightButton.y + rightButton.h/2 + 8);
+}
+
+// Touch event handlers
+function touchStarted() {
+  if (!isTouchDevice) return;
+  
+  let touchX = touches[touches.length - 1].x;
+  let touchY = touches[touches.length - 1].y;
+  
+  // Check if touch is on left button
+  if (touchX >= leftButton.x && touchX <= leftButton.x + leftButton.w &&
+      touchY >= leftButton.y && touchY <= leftButton.y + leftButton.h && !gameOver) {
+    leftPressed = true;
+  }
+  
+  // Check if touch is on right button
+  if (touchX >= rightButton.x && touchX <= rightButton.x + rightButton.w &&
+      touchY >= rightButton.y && touchY <= rightButton.y + rightButton.h && !gameOver) {
+    rightPressed = true;
+  }
+  
+  // Check if touch is on restart button
+  if (gameOver && touchX >= restartButton.x && touchX <= restartButton.x + restartButton.w &&
+      touchY >= restartButton.y && touchY <= restartButton.y + restartButton.h) {
+    restartGame();
+  }
+  
+  return false; // Prevent default
+}
+
+function touchEnded() {
+  if (!isTouchDevice) return;
+  
+  leftPressed = false;
+  rightPressed = false;
+  
+  return false; // Prevent default
 }
 
 // Simple collision detection functions
@@ -127,20 +253,28 @@ function collideRectCircle(rx, ry, rw, rh, cx, cy, diameter) {
   return distance <= diameter / 2;
 }
 
-// Restart game
+// Restart game function
+function restartGame() {
+  score = 0;
+  speed = 5;
+  carX = width / 2;
+  obstacles = [];
+  coins = [];
+  leftPressed = false;
+  rightPressed = false;
+  
+  for (let i = 0; i < 3; i++) {
+    obstacles.push({ x: random(50, width - 50), y: -i * 200 - 100, w: 40, h: 40 });
+    coins.push({ x: random(50, width - 50), y: -i * 300 - 200, w: 20, h: 20 });
+  }
+  gameOver = false;
+}
+
+// Keyboard restart
 function keyPressed() {
   if (key === 'r' || key === 'R' || key === ' ') {
     if (gameOver) {
-      score = 0;
-      speed = 5;
-      carX = width / 2;
-      obstacles = [];
-      coins = [];
-      for (let i = 0; i < 3; i++) {
-        obstacles.push({ x: random(50, width - 50), y: -i * 200 - 100, w: 40, h: 40 });
-        coins.push({ x: random(50, width - 50), y: -i * 300 - 200, w: 20, h: 20 });
-      }
-      gameOver = false;
+      restartGame();
     }
   }
 }
